@@ -89,13 +89,15 @@ class Player {
     update() {
         const updatedX = this.x + PLAYER_SPEED_X;
         const updatedY = this.y + this.speedY;
+
+        // ここに右キーを押したら右に、左キーを押したら左に移動するコードを記述
         if (keys["ArrowRight"]) {
             this.x += PLAYER_SPEED_X;
-            offsetX += PLAYER_SPEED_X;
         } else if (keys["ArrowLeft"]) {
             this.x -= PLAYER_SPEED_X;
-            offsetX -= PLAYER_SPEED_X;
         }
+
+        offsetX = this.x
 
         const ceilingY = getCeilingY(blocks, this, updatedX, updatedY);
         if (ceilingY) {
@@ -118,6 +120,7 @@ class Player {
             this.isJumping = false;
         }
 
+        // ＊＊＊＊＊ここに上キーもしくはスペースキーを押したらジャンプするコードを記述＊＊＊＊＊
         if ((keys[" "] || keys["ArrowUp"]) && !player.isJumping) {
             jumpSound.play();
             this.isJumping = true;
