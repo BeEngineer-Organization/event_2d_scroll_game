@@ -91,6 +91,13 @@ class Player {
         const updatedY = this.y + this.speedY;
 
         // ＊＊＊＊＊ここに右キーを押したら右に、左キーを押したら左に移動するコードを記述＊＊＊＊＊
+        if (keys["ArrowRight"]){
+            this.x += 5
+        }
+        if (keys["ArrowLeft"]){
+            this.x -= 5
+        }
+
 
         offsetX = this.x
 
@@ -116,6 +123,11 @@ class Player {
         }
 
         // ＊＊＊＊＊ここに上キーもしくはスペースキーを押したらジャンプするコードを記述＊＊＊＊＊
+        if (keys["ArrowUp"] && !this.isJumping) {
+            jumpSound.play();
+            this.speedY = PLAYER_SPEED_Y;
+            this.isJumping = true;
+        }
 
     }
     
@@ -249,6 +261,14 @@ function isGameOver() {
     return false;
 }
 
+function isGameClear() {
+    if (player.x === 2000) {
+        return true;
+    }
+    return false;
+}
+
+
 // BGMの再生を開始するための関数
 function startBGM() {
     bgm.loop = true;
@@ -335,6 +355,14 @@ function game() {
         drawGameOverScreen();
         return;
     }
+    if (isGameClear()) {
+        alert("クリア！");
+        return;
+    }
+
+
+
+
     ctx.clearRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
     draw();
     update();
@@ -375,8 +403,11 @@ canvas.addEventListener("click", () => {
 // ステージ上のブロックを設定するリスト
 const blocks = [
     new Block(0, 332, 2000, BLOCK_HEIGHT),
-    new Block(250, 232, 250, BLOCK_HEIGHT),
-    new Block(500, 132, 530, BLOCK_HEIGHT),
+    new Block(50,300,1500,BLOCK_HEIGHT),
+    new Block(100,268,1000,BLOCK_HEIGHT),
+    new Block(150,236,500,BLOCK_HEIGHT),
+    new Block(200,204,250,BLOCK_HEIGHT),
+    new Block(250,172,200,BLOCK_HEIGHT)
 ];
 
 // 実行
