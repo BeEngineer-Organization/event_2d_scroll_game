@@ -10,8 +10,8 @@ const DISPLAY_WIDTH = 640;
 // プレイヤーに関する情報を設定
 const PLAYER_WIDTH = 32;
 const PLAYER_HEIGHT = 32;
-const PLAYER_SPEED_X = 5;
-const PLAYER_SPEED_Y = -12;
+const PLAYER_SPEED_X = 7;
+const PLAYER_SPEED_Y = -14;
 
 // 重力の大きさを設定
 const GRAVITY = 0.7;
@@ -33,7 +33,7 @@ const BUTTON_WIDTH = 200;
 const BUTTON_HEIGHT = 50;
 
 // 敵が出現する座標を設定
-const ENEMY_POSITIONS = [800, 950, 1000, 1200, 1300, 1400, 1500];
+const ENEMY_POSITIONS = [150, 200, 250, 300, 800, 950, 1000, 1200, 1300, 1400, 1500];
 
 // HTMLの要素を取得
 const canvas = document.getElementById("maincanvas");
@@ -91,7 +91,12 @@ class Player {
         const updatedY = this.y + this.speedY;
 
         // ＊＊＊＊＊ここに右キーを押したら右に、左キーを押したら左に移動するコードを記述＊＊＊＊＊
-
+        if(keys["ArrowRight"]){
+            this.x +=PLAYER_SPEED_X
+        }
+        if(keys["ArrowLeft"]){
+            this.x -=PLAYER_SPEED_X
+        }
         offsetX = this.x
 
         const ceilingY = getCeilingY(blocks, this, updatedX, updatedY);
@@ -116,6 +121,11 @@ class Player {
         }
 
         // ＊＊＊＊＊ここに上キーもしくはスペースキーを押したらジャンプするコードを記述＊＊＊＊＊
+        if(keys[" "] && !this.isJumping){
+            jumpSound.play();
+            this.speedY = PLAYER_SPEED_Y;
+            this.isJumping = true;
+        }
 
     }
     
@@ -249,6 +259,13 @@ function isGameOver() {
     return false;
 }
 
+function isGameClear(){
+    if(player.x >1900 && player.x <2000 && player.y <100){
+        return true;
+    }
+    return false;
+}
+
 // BGMの再生を開始するための関数
 function startBGM() {
     bgm.loop = true;
@@ -335,6 +352,10 @@ function game() {
         drawGameOverScreen();
         return;
     }
+    if(isGameClear()){
+        alert("ゲームクリア！");
+        return;
+    }
     ctx.clearRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
     draw();
     update();
@@ -377,6 +398,9 @@ const blocks = [
     new Block(0, 332, 2000, BLOCK_HEIGHT),
     new Block(250, 232, 250, BLOCK_HEIGHT),
     new Block(500, 132, 530, BLOCK_HEIGHT),
+    new Block(1400, 232, 100, BLOCK_HEIGHT),
+    new Block(1600, 132, 100, BLOCK_HEIGHT),
+    new Block(1000, 32, 200, BLOCK_HEIGHT),
 ];
 
 // 実行
