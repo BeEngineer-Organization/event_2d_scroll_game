@@ -142,7 +142,7 @@ class Player {
         this.speedY = 0;
         this.isJumping = false;
         this.image = new Image();
-        this.image.src = "../images/character.png";
+        this.image.src = "../images/character_default.png";
         this.width = PLAYER_WIDTH;
         this.height = PLAYER_HEIGHT;
         this.lastDirection = 1; // 最後の移動方向（1:右, -1:左）
@@ -593,6 +593,7 @@ function isGameOver() {
 
     if (isCollide(player,crystal)){
         crystal.get = true
+        player.image.src = "../images/character.png";
         ctx.clearRect(CRYSTAL_X,CRYSTAL_Y,CRYSTAL_WIDTH,CRYSTAL_HEIGHT)
         return false;
     }
