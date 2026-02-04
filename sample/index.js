@@ -45,7 +45,7 @@ const ENEMY_POSITIONS = [800, 950, 1000, 1200, 1300, 1400, 1500,2000,2100];
 const AXE_WIDTH = 32;
 const AXE_HEIGHT = 32;
 const AXE_SPEED_X = 8;
-const AXE_DURATION = 2000; // 2秒間直線飛行
+const AXE_DURATION = 500; // 2秒間直線飛行
 
 // ジャンプ敵に関する情報を設定
 const JUMPING_ENEMY_WIDTH = 32;
@@ -65,6 +65,12 @@ const SPEAR_HEIGHT = 32;
 const SPEAR_SPEED_Y = -12;
 const SPEAR_SPEED_X_BASE = 3;
 const SPEAR_INTERVAL = 800
+
+// 追従敵に関する情報を設定
+const CHASE_ENEMY_WIDTH = 32;
+const CHASE_ENEMY_HEIGHT = 32;
+const CHASE_ENEMY_SPEED_X = 1.5; // ゆっくりのスピード
+const CHASE_ENEMY_AXE_INTERVAL = 3000; // 3秒おきに斧を投げる
 
 // HTMLの要素を取得
 const canvas = document.getElementById("maincanvas");
@@ -220,14 +226,13 @@ class Axe {
     update() {
         const elapsedTime = Date.now() - this.createdTime;
         
+        this.x += this.speedX;
         // 2秒以内は直線飛行
-        if (elapsedTime < AXE_DURATION) {
-            this.x += this.speedX;
-        } else {
+        if (elapsedTime > AXE_DURATION) {
             // 2秒後は重力で下降
             this.y += this.speedY;
             this.speedY += GRAVITY;
-        }
+        } 
         
         // 回転アニメーション
         this.rotation += 0.3;
@@ -372,6 +377,51 @@ class Spear {
 
     isActive() {
         return this.x - offsetX + DISTANCETOGROUND > -50 && this.x - offsetX + DISTANCETOGROUND < DISPLAY_WIDTH + 50 && this.y < DISPLAY_HEIGHT + 50;
+    }
+}
+
+// =============== 追従敵クラス（プレイヤーに近づいて斧を投げる） ===============
+class ChaseEnemy {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.speedY = 0;
+        this.image = new Image();
+        this.image.src = "../images/white_ghost.png";
+        this.width = CHASE_ENEMY_WIDTH;
+        this.height = CHASE_ENEMY_HEIGHT;
+        this.lastAxeTime = Date.now();
+    }
+
+    update() {
+        // プレイヤーに向かってx方向に移動
+        if (this.x > player.x) {
+            this.x -= CHASE_ENEMY_SPEED_X; // 左へ移動
+        } else if (this.x < player.x) {
+            this.x += CHASE_ENEMY_SPEED_X; // 右へ移動
+        }
+
+        // y軸はプレイヤーと全く同じ動きをする
+        this.speedY = player.speedY;
+        this.y = player.y;
+
+        // 3秒おきに斧を投げる
+        const currentTime = Date.now();
+        if (currentTime - this.lastAxeTime > CHASE_ENEMY_AXE_INTERVAL) {
+            const direction = this.x > player.x ? -1 : 1; // プレイヤーに向かう方向
+            chaseEnemyAxes.push(new Axe(this.x, this.y, direction));
+            this.lastAxeTime = currentTime;
+        }
+    }
+
+    draw() {
+        ctx.drawImage(
+            this.image,
+            this.x - offsetX + DISTANCETOGROUND,
+            this.y,
+            CHASE_ENEMY_WIDTH,
+            CHASE_ENEMY_HEIGHT
+        );
     }
 }
 
@@ -533,13 +583,13 @@ function ResolveCollision(enemies,is_weapon=false){
 function isGameOver() {
     const updatedY = player.y + player.speedY;
 
-    if (isFallen(updatedY)) {
-        return true
-    }
+    if (isFallen(updatedY)) return true;
 
-    if(ResolveCollision(enemies) || ResolveCollision(jumpingEnemies)||ResolveCollision(spears,is_weapon=true)){
-        return true
-    }
+    if(ResolveCollision(enemies) || 
+    ResolveCollision(jumpingEnemies)||
+    ResolveCollision(spears,is_weapon=true)||
+    ResolveCollision(chaseEnemies)||
+    ResolveCollision(chaseEnemyAxes,is_weapon=true)) return true;
 
     if (isCollide(player,crystal)){
         crystal.get = true
@@ -644,6 +694,20 @@ function drawGoalScreen() {
     );
 }
 
+function attackCollision(weapons,index,enemies){
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        console.log(weapons)
+        console.log(weapons[index])
+        if (isWeaponCollide(weapons[index], enemies[i])) {
+            enemies.splice(i, 1);
+            weapons.splice(index, 1);
+            crushSound.play();
+            return true;
+        }
+    }
+    return false;
+}
+
 // プレイヤー、ブロック、敵の表示メソッドをまとめて実行する関数
 function draw() {
     player.draw();
@@ -652,64 +716,54 @@ function draw() {
     crystal.draw();
     goalFlag.draw();
 
+    // プレイヤー投げの斧
     axes.forEach((axe, index) => {
-        axe.update();
         if (axe.isActive()) {
             axe.draw();
-            
+        
             // 敵との衝突判定
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                if (isWeaponCollide(axe, enemies[i])) {
-                    console.log('当たった')
-                    enemies.splice(i, 1);
-                    axes.splice(index, 1);
-                    crushSound.play();
-                    break;
-                }
-            }
-            
-            // ジャンプ敵との衝突判定
-            for (let i = jumpingEnemies.length - 1; i >= 0; i--) {
-                if (isWeaponCollide(axe, jumpingEnemies[i])) {
-                    jumpingEnemies.splice(i, 1);
-                    axes.splice(index, 1);
-                    crushSound.play();
-                    break;
-                }
-            }
+            attackCollision(axes,index,enemies,)||
+            attackCollision(axes,index,jumpingEnemies)||
+            attackCollision(axes,index,chaseEnemies);
         } else {
             axes.splice(index, 1);
         }
     });
 
+    // 追従敵が投げた斧
+    chaseEnemyAxes.forEach((axe, index) => {
+        axe.update();
+        if (axe.isActive()) {
+            axe.draw();
+        } else {
+            chaseEnemyAxes.splice(index, 1);
+        }
+    });
+
     // 槍の更新と描画
     spears.forEach((spear, index) => {
-        spear.update();
         if (spear.isActive()) {
             spear.draw();
-            
-            // プレイヤーとの衝突判定
-            // if (isWeaponCollide(spear, player)) {
-            //     gameOverSound.play();
-            //     screenStatus = GAMEOVER_SCREEN;
-            //     drawGameOverScreen();
-            // }
         } else {
             spears.splice(index, 1);
         }
     });
 
-    // ジャンプ敵の更新と描画
-    jumpingEnemies.forEach((enemy, index) => {
-        enemy.update();
-        enemy.draw();
-    });
+    // ジャンプ敵の描画
+    jumpingEnemies.forEach((enemy) => {enemy.draw();});
+    
+    // 追従敵の描画
+    chaseEnemies.forEach((enemy) => {enemy.draw();});
 }
 
 // プレイヤー、敵の情報更新メソッドをまとめて実行する関数
 function update() {
     player.update();
     enemies.forEach((enemy) => enemy.update());
+    jumpingEnemies.forEach((enemy)=>{enemy.update()});
+    chaseEnemies.forEach((enemy) => {enemy.update()});
+    spears.forEach((spear)=>{spear.update()});
+    axes.forEach((axe)=>{axe.update()});
 }
 
 // ゲーム全体の実行関数
@@ -771,6 +825,7 @@ canvas.addEventListener("click", () => {
 
 const axes = []; // 飛んでいる斧を管理
 const spears = []; // 飛んでいる槍を管理
+const chaseEnemyAxes = []; // 追従敵が投げた斧を管理
 const jumpingEnemies = [
     new JumpingEnemy(150),
     new JumpingEnemy(1000),
@@ -787,6 +842,11 @@ const blocks = [
 
 const crystal = new Crystal()
 const goalFlag = new GoalFlag(GOAL_FLAG_X, GOAL_FLAG_Y);
+
+// 追従敵を配置
+const chaseEnemies = [
+    new ChaseEnemy(1300, 300),
+];
 
 // 実行
 let screenStatus = START_SCREEN;
